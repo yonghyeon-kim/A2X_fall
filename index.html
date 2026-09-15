@@ -41,6 +41,7 @@
   button.tool.add { background: var(--navy); }
   button.tool.edit { background: #2e8b57; }
   button.tool.edit.active { background: #d68910; }
+  button.tool.reset { background: var(--red); }
 
   .tabs { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; max-width: 900px; margin: 0 auto 20px; }
   .tab {
@@ -127,12 +128,12 @@
 <body>
   <header>
     <h1>🍾 A2X센터 추석 게임한마당 개인전</h1>
-    <div class="sub">병뚜껑 멀리 보내기 · 기록이 낮을수록(0cm에 가까울수록) 상위</div>
   </header>
 
   <div class="toolbar">
     <button class="tool add" id="btnAdd">➕ 기록 등록</button>
     <button class="tool edit" id="btnEdit">✏️ Edit</button>
+    <button class="tool reset" id="btnReset">↺ 초기화</button>
   </div>
 
   <div class="mode-badge" id="modeBadge"></div>
@@ -465,6 +466,14 @@
     if (editMode) { editMode = false; render(); return; }
     var ok = await askPassword("편집 모드를 시작");
     if (ok) { editMode = true; render(); }
+  });
+  document.getElementById("btnReset").addEventListener("click", async function () {
+    var ok = await askPassword("전체 기록을 초기화");
+    if (!ok) return;
+    var sure = await askConfirm("초기화 확인", "등록된 모든 기록이 삭제됩니다. 정말 초기화할까요?");
+    if (!sure) return;
+    records = [];
+    saveRecords(); render();
   });
 
   document.getElementById("panel").addEventListener("click", async function (ev) {
