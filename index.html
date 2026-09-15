@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>A2X센터 추석 게임한마당 개인전</title>
+<style>
+  :root {
+    --ice: #eaf4fb;
+    --ice-deep: #cfe6f5;
+    --navy: #113a5d;
+    --blue: #1e6fa8;
+    --red: #c0392b;
+    --line: #b9d4e6;
+    --gold: #d4af37;
+    --silver: #9fb0bd;
+    --bronze: #cd7f32;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", "Malgun Gothic", sans-serif;
+    background: linear-gradient(160deg, #f5fbff 0%, #dcecf7 100%);
+    color: var(--navy);
+    min-height: 100vh;
+    padding: 24px 16px 60px;
+  }
+  header { text-align: center; margin-bottom: 16px; }
+  header h1 { margin: 0; font-size: clamp(20px, 4vw, 32px); letter-spacing: 1px; line-height: 1.3; }
+  header .sub { color: var(--blue); font-size: 13px; margin-top: 6px; }
+
+  .toolbar { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 18px 0 22px; }
+  button.tool {
+    border: none; border-radius: 10px; padding: 10px 18px;
+    font-size: 15px; font-weight: 700; cursor: pointer; color: #fff;
+    background: var(--blue); box-shadow: 0 3px 8px rgba(0,0,0,.15);
+    transition: transform .05s ease, filter .15s ease;
+  }
+  button.tool:hover { filter: brightness(1.08); }
+  button.tool:active { transform: translateY(1px); }
+  button.tool.add { background: var(--navy); }
+  button.tool.edit { background: #2e8b57; }
+  button.tool.edit.active { background: #d68910; }
+
+  .tabs { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; max-width: 900px; margin: 0 auto 20px; }
+  .tab {
+    border: 1px solid var(--line); background: #fff; color: var(--navy);
+    border-radius: 10px 10px 0 0; padding: 10px 16px; font-size: 14px; font-weight: 700;
+    cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,.06);
+  }
+  .tab.active { background: var(--navy); color: #fff; border-color: var(--navy); }
+
+  .panel { max-width: 900px; margin: 0 auto; }
+
+  .podium { display: flex; justify-content: center; align-items: flex-end; gap: 12px; margin-bottom: 22px; flex-wrap: wrap; }
+  .pcard {
+    border-radius: 14px; padding: 14px 16px; text-align: center; color: #fff;
+    min-width: 120px; box-shadow: 0 6px 18px rgba(0,0,0,.18);
+  }
+  .pcard.p1 { background: linear-gradient(160deg,#e9c94a,#c9a227); order: 2; transform: translateY(-8px); min-width: 140px; }
+  .pcard.p2 { background: linear-gradient(160deg,#b7c6d2,#8b9aa7); order: 1; }
+  .pcard.p3 { background: linear-gradient(160deg,#dd9a5b,#b8722f); order: 3; }
+  .pcard .medal { font-size: 30px; }
+  .pcard .pname { font-size: 18px; font-weight: 800; margin: 4px 0; word-break: break-all; }
+  .pcard .ptask { font-size: 11px; opacity: .9; margin-bottom: 6px; min-height: 14px; }
+  .pcard .pscore { font-size: 20px; font-weight: 900; }
+
+  .table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;
+    background: #fff; border: 1px solid var(--line); border-radius: 14px;
+    box-shadow: 0 6px 20px rgba(30,111,168,.12); }
+  table { width: 100%; border-collapse: collapse; min-width: 480px; }
+  th, td { border-bottom: 1px solid var(--line); text-align: center; padding: 11px 8px; font-size: 15px; }
+  thead th { background: var(--ice); color: var(--navy); font-weight: 700; font-size: 13px; }
+  td.name { text-align: left; padding-left: 16px; font-weight: 700; }
+  td.task { color: #5a7488; font-size: 13px; }
+  td.score { font-weight: 800; }
+  tr.rank-1 { background: linear-gradient(90deg, rgba(212,175,55,.22), transparent); }
+  tr.rank-2 { background: linear-gradient(90deg, rgba(159,176,189,.22), transparent); }
+  tr.rank-3 { background: linear-gradient(90deg, rgba(205,127,50,.20), transparent); }
+  td.rankcell { font-weight: 800; width: 64px; }
+  .empty { text-align: center; padding: 34px 10px; color: #7a99ad; }
+  .row-actions button {
+    border: none; border-radius: 7px; padding: 6px 10px; font-size: 13px;
+    font-weight: 700; cursor: pointer; margin: 0 2px; color: #fff;
+  }
+  .row-actions .e { background: var(--blue); }
+  .row-actions .d { background: var(--red); }
+
+  .mode-badge { text-align:center; margin: 0 auto 14px; font-size: 13px; font-weight:700; color:#d68910; }
+
+  /* Overlay + modal */
+  .overlay { position: fixed; inset: 0; background: rgba(17,58,93,.45);
+    display: none; align-items: center; justify-content: center; z-index: 100; padding: 16px; }
+  .overlay.show { display: flex; }
+  .modal { background: #fff; border-radius: 14px; padding: 22px; width: min(400px, 94vw);
+    box-shadow: 0 10px 40px rgba(0,0,0,.3); text-align: center; }
+  .modal h3 { margin: 0 0 14px; font-size: 18px; }
+  .modal p { margin: 0 0 14px; font-size: 14px; color:#456; line-height:1.5; }
+  .modal label { display:block; text-align:left; font-size: 13px; font-weight:700; margin: 10px 0 4px; }
+  .modal input, .modal select {
+    width: 100%; padding: 11px 12px; font-size: 16px;
+    border: 1px solid var(--line); border-radius: 8px; background:#fff;
+  }
+  .modal .unit-row { display:flex; align-items:center; gap:8px; }
+  .modal .unit-row input { flex:1; }
+  .modal .unit { font-weight:800; color:var(--navy); }
+  .modal .err { color: var(--red); font-size: 13px; min-height: 18px; margin: 10px 0; }
+  .modal .btns { display: flex; gap: 10px; justify-content: center; margin-top: 6px; }
+  .modal .btns button { border: none; border-radius: 8px; padding: 11px 20px; font-size: 15px; font-weight: 700; cursor: pointer; }
+  .modal .ok { background: var(--blue); color: #fff; }
+  .modal .danger { background: var(--red); color: #fff; }
+  .modal .cancel { background: #e3ebf1; color: var(--navy); }
+
+  @media (max-width: 640px) {
+    body { padding: 14px 8px 48px; }
+    .tab { padding: 9px 12px; font-size: 13px; }
+    button.tool { flex: 1 1 42%; min-width: 130px; padding: 12px 10px; }
+    .pcard { min-width: 100px; padding: 12px; }
+    .pcard.p1 { min-width: 112px; }
+    th, td { padding: 10px 6px; font-size: 14px; }
+  }
+  @media (max-width: 380px) {
+    button.tool { flex: 1 1 100%; }
+  }
+</style>
+</head>
+<body>
+  <header>
+    <h1>🍾 A2X센터 추석 게임한마당 개인전</h1>
+    <div class="sub">병뚜껑 멀리 보내기 · 기록이 낮을수록(0cm에 가까울수록) 상위</div>
+  </header>
+
+  <div class="toolbar">
+    <button class="tool add" id="btnAdd">➕ 기록 등록</button>
+    <button class="tool edit" id="btnEdit">✏️ Edit</button>
+  </div>
+
+  <div class="mode-badge" id="modeBadge"></div>
+
+  <div class="tabs" id="tabs"></div>
+  <div class="panel" id="panel"></div>
+
+  <!-- PW / confirm overlay -->
+  <div class="overlay" id="pwOverlay">
+    <div class="modal">
+      <h3 id="pwTitle">관리자 인증</h3>
+      <p id="pwMsg"></p>
+      <input type="password" id="pwInput" placeholder="관리자 PW 입력" autocomplete="off" />
+      <div class="err" id="pwErr"></div>
+      <div class="btns" id="pwBtns"></div>
+    </div>
+  </div>
+
+  <!-- Record form overlay -->
+  <div class="overlay" id="formOverlay">
+    <div class="modal">
+      <h3 id="formTitle">기록 등록</h3>
+      <label for="fName">이름</label>
+      <input type="text" id="fName" placeholder="이름 입력" autocomplete="off" />
+      <label for="fOrg">조직</label>
+      <select id="fOrg"></select>
+      <label for="fTask">Task</label>
+      <select id="fTask"></select>
+      <label for="fScore">기록</label>
+      <div class="unit-row">
+        <input type="number" id="fScore" inputmode="decimal" min="0" step="0.1" placeholder="숫자만 입력" />
+        <span class="unit">cm</span>
+      </div>
+      <div class="err" id="formErr"></div>
+      <div class="btns">
+        <button class="ok" id="formSave">저장</button>
+        <button class="cancel" id="formCancel">취소</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function () {
+  "use strict";
+
+  var STORE_KEY = "a2x_fall_bottlecap_v1";
+  var OBF_KEY = "A2Xfall2026!bottlecap";
+  // 조직/Task 정보는 소스에 평문으로 노출하지 않도록 XOR 로 난독화 (런타임 복호화)
+  var DATA = [26,73,122,8,67,86,78,222,151,179,218,167,239,77,88,86,24,71,89,58,82,17,90,33,21,8,15,13,94,16,97,95,76,23,3,21,0,5,10,13,65,36,32,65,51,68,77,78,45,123,16,97,83,83,20,6,23,17,76,54,12,13,5,53,91,55,8,65,56,13,65,91,16,26,3,42,56,84,39,3,9,22,21,25,46,92,120,50,0,31,7,16,109,79,26,90,64,1,86,78,78,137,233,197,155,230,186,181,236,217,135,198,154,219,139,186,202,196,195,153,255,220,137,244,209,154,244,158,180,224,237,78,64,16,68,16,12,122,64,132,222,220,135,220,239,138,214,237,223,211,214,141,232,204,223,166,187,221,145,254,133,193,192,56,4,16,10,82,109,16,25,37,49,76,47,93,94,65,89,77,11,11,21,0,5,10,13,65,36,32,65,51,68,77,78,47,83,82,91,88,1,35,38,84,32,13,22,8,67,92,99,118,49,1,8,24,13,94,16,102,65,72,12,79,39,27,0,16,23,8,31,47,18,12,7,18,7,78,30,18,91,96,100,58,79,32,21,31,14,65,77,82,18,118,14,138,229,204,129,164,185,216,134,189,137,223,232,32,13,22,8,67,45,60,30,35,68,15,78,86,16,120,97,25,100,49,79,152,240,204,136,245,232,156,214,130,178,211,205,128,234,190,18,30,20,85,64,85,47,86,36,54,76,36,35,97,222,220,198,140,250,229,217,128,174,220,148,214,59,21,7,7,71,79,67,57,47,70,61,20,0,15,24,91,70,87,22,105,13,2,17,84,63,10,15,20,4,40,93,54,70,53,13,31,89,18,30,20,123,7,29,27,89,32,12,14,8,4,97,102,61,5,9,76,56,83,67,89,20,13,64,46,61,84,63,0,13,18,25,47,85,126,39,17,28,0,91,83,83,66,72,13,1,84,32,13,22,8,67,92,99,123,54,18,4,0,0,91,87,87,88,85,66,45,70,54,76,54,12,13,5,53,91,55,8,65,56,13,65,91,16,107,92,78,20,86,26,78,95,65,8,60,32,80,122,74,67,24,78,8,107,16,117,78,16,10,84,61,3,49,67,53,17,50,89,122,74,67,36,3,95,85,18,100,78,0,0,0,84,47,4,14,4,2,32,18,12,7,18,7,78,30,18,101,83,64,16,14,22,24,9,69,48,2,2,36,87,54,70,53,13,31,89,18,30,20,108,66,59,21,7,7,71,79,67,32,36,64,43,9,15,13,0,18,113,123,22,101,7,25,29,23,9,69,55,0,3,42,16,116,68,40,2,24,87,92,94,95,70,7,1,23,17,76,34,15,0,3,50,87,43,70,53,13,31,89,18,111,75,124];
+
+  // 관리자 PW는 SHA-256 해시로만 보관 (영문 대소문자 무시)
+  var PW_HASHES = [
+    "7b90a23d51e4eed61a565b52ccf3f8a7503fbc272e35c9510d8db728dcf24261",
+    "f88e1d81fd3fce6a8a8101e751b9ac658e82c7bd4f7736274a4d9d8c34978994"
+  ];
+
+  // ---------- crypto / obfuscation helpers ----------
+  function sha256Hex(str) {
+    return crypto.subtle.digest("SHA-256", new TextEncoder().encode(str)).then(function (buf) {
+      return Array.prototype.map.call(new Uint8Array(buf), function (b) {
+        return ("0" + b.toString(16)).slice(-2);
+      }).join("");
+    });
+  }
+  function deobfuscate(arr) {
+    var key = new TextEncoder().encode(OBF_KEY);
+    var bytes = new Uint8Array(arr.length);
+    for (var i = 0; i < arr.length; i++) bytes[i] = arr[i] ^ key[i % key.length];
+    return new TextDecoder().decode(bytes);
+  }
+
+  var ORGS = JSON.parse(deobfuscate(DATA)); // [{n, t:[...]}]
+  var NONE = "선택 안함";
+
+  function sortKo(arr) {
+    return arr.slice().sort(function (a, b) { return a.localeCompare(b, "ko"); });
+  }
+
+  // ---------- state ----------
+  var records = loadRecords();  // [{id, name, org(index), task(string), score(number)}]
+  var activeTab = 0;
+  var editMode = false;
+
+  function loadRecords() {
+    try {
+      var raw = localStorage.getItem(STORE_KEY);
+      if (!raw) return [];
+      var r = JSON.parse(raw);
+      return Array.isArray(r) ? r : [];
+    } catch (e) { return []; }
+  }
+  function saveRecords() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(records)); } catch (e) {}
+  }
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+  function fmtScore(n) {
+    var v = Number(n);
+    if (!isFinite(v)) return "-";
+    return v.toString() + " cm";
+  }
+
+  // ---------- rendering ----------
+  function renderTabs() {
+    var tabs = document.getElementById("tabs");
+    tabs.innerHTML = "";
+    ORGS.forEach(function (o, i) {
+      var b = document.createElement("button");
+      b.className = "tab" + (i === activeTab ? " active" : "");
+      b.textContent = o.n;
+      b.onclick = function () { activeTab = i; render(); };
+      tabs.appendChild(b);
+    });
+  }
+
+  function rankedRecords(orgIdx) {
+    var list = records.filter(function (r) { return r.org === orgIdx; });
+    list.sort(function (a, b) {
+      if (a.score !== b.score) return a.score - b.score; // 낮을수록 상위
+      return a.name.localeCompare(b.name, "ko");
+    });
+    list.forEach(function (r) {
+      var better = list.filter(function (x) { return x.score < r.score; }).length;
+      r._rank = better + 1; // 동점 동순위
+    });
+    return list;
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function renderPanel() {
+    var panel = document.getElementById("panel");
+    panel.innerHTML = "";
+    var list = rankedRecords(activeTab);
+
+    if (list.length > 0) {
+      var podium = document.createElement("div");
+      podium.className = "podium";
+      var medals = ["🥇", "🥈", "🥉"];
+      var top3 = [];
+      [1, 2, 3].forEach(function (rk) {
+        var found = list.filter(function (r) { return r._rank === rk; });
+        if (found.length) top3.push({ rank: rk, rec: found[0], extra: found.length - 1 });
+      });
+      top3.forEach(function (t) {
+        var c = document.createElement("div");
+        c.className = "pcard p" + t.rank;
+        c.innerHTML =
+          '<div class="medal">' + medals[t.rank - 1] + '</div>' +
+          '<div class="pname">' + esc(t.rec.name) + (t.extra > 0 ? ' 외 ' + t.extra + '명' : '') + '</div>' +
+          '<div class="ptask">' + (t.rec.task ? esc(t.rec.task) : '') + '</div>' +
+          '<div class="pscore">' + fmtScore(t.rec.score) + '</div>';
+        podium.appendChild(c);
+      });
+      panel.appendChild(podium);
+    }
+
+    var wrap = document.createElement("div");
+    wrap.className = "table-wrap";
+    if (list.length === 0) {
+      wrap.innerHTML = '<div class="empty">아직 등록된 기록이 없습니다.<br>「➕ 기록 등록」으로 추가하세요.</div>';
+      panel.appendChild(wrap);
+      return;
+    }
+    var thead = "<thead><tr><th>순위</th><th>이름</th><th>Task</th><th>기록</th>" +
+      (editMode ? "<th>관리</th>" : "") + "</tr></thead>";
+    var body = "<tbody>";
+    list.forEach(function (r) {
+      var rc = r._rank <= 3 ? " rank-" + r._rank : "";
+      var medal = r._rank === 1 ? "🥇 " : r._rank === 2 ? "🥈 " : r._rank === 3 ? "🥉 " : "";
+      body += "<tr class='" + rc + "'>" +
+        "<td class='rankcell'>" + medal + r._rank + "</td>" +
+        "<td class='name'>" + esc(r.name) + "</td>" +
+        "<td class='task'>" + (r.task ? esc(r.task) : "-") + "</td>" +
+        "<td class='score'>" + fmtScore(r.score) + "</td>" +
+        (editMode ? "<td class='row-actions'><button class='e' data-edit='" + r.id + "'>✏️</button>" +
+          "<button class='d' data-del='" + r.id + "'>🗑</button></td>" : "") +
+        "</tr>";
+    });
+    body += "</tbody>";
+    var table = document.createElement("table");
+    table.innerHTML = thead + body;
+    wrap.appendChild(table);
+    panel.appendChild(wrap);
+  }
+
+  function render() {
+    document.getElementById("modeBadge").textContent = editMode ? "✏️ 편집 모드 (기록 수정/삭제 가능)" : "";
+    document.getElementById("btnEdit").textContent = editMode ? "✔ 완료" : "✏️ Edit";
+    document.getElementById("btnEdit").classList.toggle("active", editMode);
+    renderTabs();
+    renderPanel();
+  }
+
+  // ---------- PW modal ----------
+  var pwOverlay = document.getElementById("pwOverlay");
+  var pwTitle = document.getElementById("pwTitle");
+  var pwMsg = document.getElementById("pwMsg");
+  var pwInput = document.getElementById("pwInput");
+  var pwErr = document.getElementById("pwErr");
+  var pwBtns = document.getElementById("pwBtns");
+
+  function closePw() { pwOverlay.classList.remove("show"); pwInput.value = ""; pwErr.textContent = ""; }
+
+  function askPassword(actionLabel) {
+    return new Promise(function (resolve) {
+      pwTitle.textContent = "관리자 인증";
+      pwMsg.textContent = actionLabel ? (actionLabel + " 하려면 관리자 PW를 입력하세요.") : "관리자 PW를 입력하세요.";
+      pwInput.style.display = ""; pwInput.value = ""; pwErr.textContent = "";
+      pwBtns.innerHTML = "";
+      var ok = document.createElement("button"); ok.className = "ok"; ok.textContent = "확인";
+      var cancel = document.createElement("button"); cancel.className = "cancel"; cancel.textContent = "취소";
+      pwBtns.appendChild(ok); pwBtns.appendChild(cancel);
+      function verify() {
+        var val = (pwInput.value || "").trim().toLowerCase();
+        sha256Hex(val).then(function (h) {
+          if (PW_HASHES.indexOf(h) !== -1) { closePw(); resolve(true); }
+          else { pwErr.textContent = "❌ PW가 올바르지 않습니다."; pwInput.select(); }
+        });
+      }
+      ok.onclick = verify;
+      cancel.onclick = function () { closePw(); resolve(false); };
+      pwInput.onkeydown = function (ev) { if (ev.key === "Enter") verify(); };
+      pwOverlay.classList.add("show");
+      setTimeout(function () { pwInput.focus(); }, 50);
+    });
+  }
+
+  function askConfirm(title, message) {
+    return new Promise(function (resolve) {
+      pwTitle.textContent = title; pwMsg.textContent = message;
+      pwInput.style.display = "none"; pwErr.textContent = ""; pwBtns.innerHTML = "";
+      var yes = document.createElement("button"); yes.className = "danger"; yes.textContent = "예";
+      var no = document.createElement("button"); no.className = "cancel"; no.textContent = "아니오";
+      pwBtns.appendChild(yes); pwBtns.appendChild(no);
+      yes.onclick = function () { closePw(); pwInput.style.display = ""; resolve(true); };
+      no.onclick = function () { closePw(); pwInput.style.display = ""; resolve(false); };
+      pwOverlay.classList.add("show");
+    });
+  }
+
+  // ---------- Form modal ----------
+  var formOverlay = document.getElementById("formOverlay");
+  var fName = document.getElementById("fName");
+  var fOrg = document.getElementById("fOrg");
+  var fTask = document.getElementById("fTask");
+  var fScore = document.getElementById("fScore");
+  var formErr = document.getElementById("formErr");
+  var formTitle = document.getElementById("formTitle");
+  var editingId = null;
+
+  function buildOrgSelect(selectedIdx) {
+    var opts = ORGS.map(function (o, i) { return { i: i, n: o.n }; });
+    opts.sort(function (a, b) { return a.n.localeCompare(b.n, "ko"); });
+    fOrg.innerHTML = "";
+    opts.forEach(function (o) {
+      var el = document.createElement("option");
+      el.value = o.i; el.textContent = o.n;
+      if (o.i === selectedIdx) el.selected = true;
+      fOrg.appendChild(el);
+    });
+  }
+  function buildTaskSelect(orgIdx, selectedTask) {
+    fTask.innerHTML = "";
+    var none = document.createElement("option");
+    none.value = ""; none.textContent = NONE;
+    fTask.appendChild(none);
+    sortKo(ORGS[orgIdx].t).forEach(function (t) {
+      var el = document.createElement("option");
+      el.value = t; el.textContent = t;
+      if (t === selectedTask) el.selected = true;
+      fTask.appendChild(el);
+    });
+    if (!selectedTask) none.selected = true;
+  }
+
+  fOrg.addEventListener("change", function () {
+    buildTaskSelect(parseInt(fOrg.value, 10), "");
+  });
+
+  function openForm(mode, rec) {
+    editingId = mode === "edit" ? rec.id : null;
+    formTitle.textContent = mode === "edit" ? "기록 편집" : "기록 등록";
+    formErr.textContent = "";
+    fName.value = rec ? rec.name : "";
+    var orgIdx = rec ? rec.org : 0;
+    buildOrgSelect(orgIdx);
+    fOrg.value = String(orgIdx);
+    buildTaskSelect(orgIdx, rec ? rec.task : "");
+    fScore.value = rec && rec.score !== null && rec.score !== undefined ? rec.score : "";
+    formOverlay.classList.add("show");
+    setTimeout(function () { fName.focus(); }, 50);
+  }
+  function closeForm() { formOverlay.classList.remove("show"); editingId = null; }
+
+  document.getElementById("formCancel").onclick = closeForm;
+  document.getElementById("formSave").onclick = function () {
+    var name = fName.value.trim();
+    var org = parseInt(fOrg.value, 10);
+    var task = fTask.value; // "" = 선택 안함
+    var scoreRaw = fScore.value.trim();
+    if (!name) { formErr.textContent = "이름을 입력하세요."; return; }
+    if (isNaN(org)) { formErr.textContent = "조직을 선택하세요."; return; }
+    if (scoreRaw === "" || isNaN(Number(scoreRaw))) { formErr.textContent = "기록(cm)을 숫자로 입력하세요."; return; }
+    var score = Number(scoreRaw);
+    if (score < 0) { formErr.textContent = "기록은 0 이상이어야 합니다."; return; }
+
+    if (editingId) {
+      var r = records.find(function (x) { return x.id === editingId; });
+      if (r) { r.name = name; r.org = org; r.task = task; r.score = score; }
+    } else {
+      records.push({ id: uid(), name: name, org: org, task: task, score: score });
+    }
+    saveRecords();
+    activeTab = org;
+    closeForm();
+    render();
+  };
+
+  // ---------- toolbar / row actions ----------
+  document.getElementById("btnAdd").addEventListener("click", async function () {
+    var ok = await askPassword("기록을 등록");
+    if (ok) openForm("add", null);
+  });
+  document.getElementById("btnEdit").addEventListener("click", async function () {
+    if (editMode) { editMode = false; render(); return; }
+    var ok = await askPassword("편집 모드를 시작");
+    if (ok) { editMode = true; render(); }
+  });
+
+  document.getElementById("panel").addEventListener("click", async function (ev) {
+    var t = ev.target;
+    var editId = t.getAttribute && t.getAttribute("data-edit");
+    var delId = t.getAttribute && t.getAttribute("data-del");
+    if (editId) {
+      var r = records.find(function (x) { return x.id === editId; });
+      if (r) openForm("edit", r);
+    } else if (delId) {
+      var rec = records.find(function (x) { return x.id === delId; });
+      var nm = rec ? rec.name : "";
+      var sure = await askConfirm("삭제 확인", "'" + nm + "' 님의 기록을 삭제할까요?");
+      if (sure) {
+        records = records.filter(function (x) { return x.id !== delId; });
+        saveRecords(); render();
+      }
+    }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
