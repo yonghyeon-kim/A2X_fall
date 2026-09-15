@@ -81,11 +81,19 @@
   td.rankcell { font-weight: 800; width: 64px; }
   .empty { text-align: center; padding: 34px 10px; color: #7a99ad; }
   .row-actions button {
-    border: none; border-radius: 7px; padding: 6px 10px; font-size: 13px;
-    font-weight: 700; cursor: pointer; margin: 0 2px; color: #fff;
+    border: none; border-radius: 7px; padding: 7px 10px; font-size: 14px;
+    font-weight: 700; cursor: pointer; margin: 2px; color: #fff; min-width: 38px; min-height: 34px;
   }
   .row-actions .e { background: var(--blue); }
   .row-actions .d { background: var(--red); }
+  .row-actions .m { background: #5a7488; }
+  .row-actions .rb { background: #9fb0bd; }
+  .row-actions .rb.on { background: #d68910; }
+  .rbadge {
+    display: inline-block; font-size: 11px; font-weight: 700; color: #b8722f;
+    background: #fff3e0; border: 1px solid #e0b070; border-radius: 6px; padding: 1px 6px; margin-right: 4px;
+    white-space: nowrap;
+  }
 
   .mode-badge { text-align:center; margin: 0 auto 14px; font-size: 13px; font-weight:700; color:#d68910; }
 
@@ -119,6 +127,9 @@
     .pcard { min-width: 100px; padding: 12px; }
     .pcard.p1 { min-width: 112px; }
     th, td { padding: 10px 6px; font-size: 14px; }
+    .row-actions button { min-width: 40px; min-height: 40px; font-size: 15px; }
+    td.row-actions { white-space: normal; width: 100px; }
+    .rbadge { display: block; margin: 0 0 3px; }
   }
   @media (max-width: 380px) {
     button.tool { flex: 1 1 100%; }
@@ -253,13 +264,29 @@
     var list = records.filter(function (r) { return r.org === orgIdx; });
     list.sort(function (a, b) {
       if (a.score !== b.score) return a.score - b.score; // 낮을수록 상위
+      var ta = a.tb || 0, tb = b.tb || 0;
+      if (ta !== tb) return ta - tb;                     // 관리자 지정 순서(동점 처리)
       return a.name.localeCompare(b.name, "ko");
     });
-    list.forEach(function (r) {
-      var better = list.filter(function (x) { return x.score < r.score; }).length;
-      r._rank = better + 1; // 동점 동순위
-    });
+    list.forEach(function (r, i) { r._rank = i + 1; });   // 공동 순위 없이 고유 순위
     return list;
+  }
+
+  function hasTie(rec, list) {
+    return list.some(function (x) { return x.id !== rec.id && x.score === rec.score; });
+  }
+
+  function moveRec(id, dir) {
+    var rec = records.find(function (x) { return x.id === id; });
+    if (!rec) return;
+    var list = rankedRecords(rec.org);
+    var idx = list.findIndex(function (x) { return x.id === id; });
+    var target = idx + (dir === "up" ? -1 : 1);
+    if (target < 0 || target >= list.length) return;
+    if (list[target].score !== rec.score) return;        // 동점 그룹 내에서만 이동
+    var tmp = list[idx]; list[idx] = list[target]; list[target] = tmp;
+    list.forEach(function (r, i) { r.tb = i; });          // 조직 내 순서를 tb로 고정
+    saveRecords(); render();
   }
 
   function esc(s) {
@@ -287,7 +314,7 @@
         c.className = "pcard p" + t.rank;
         c.innerHTML =
           '<div class="medal">' + medals[t.rank - 1] + '</div>' +
-          '<div class="pname">' + esc(t.rec.name) + (t.extra > 0 ? ' 외 ' + t.extra + '명' : '') + '</div>' +
+          '<div class="pname">' + (t.rec.rc ? '🔁 ' : '') + esc(t.rec.name) + (t.extra > 0 ? ' 외 ' + t.extra + '명' : '') + '</div>' +
           '<div class="ptask">' + (t.rec.task ? esc(t.rec.task) : '') + '</div>' +
           '<div class="pscore">' + fmtScore(t.rec.score) + '</div>';
         podium.appendChild(c);
@@ -308,13 +335,26 @@
     list.forEach(function (r) {
       var rc = r._rank <= 3 ? " rank-" + r._rank : "";
       var medal = r._rank === 1 ? "🥇 " : r._rank === 2 ? "🥈 " : r._rank === 3 ? "🥉 " : "";
+      var tie = hasTie(r, list);
+      var badge = r.rc ? "<span class='rbadge'>🔁 재경기 확정</span> " : "";
+      var actions = "";
+      if (editMode) {
+        actions = "<td class='row-actions'>" +
+          "<button class='e' data-edit='" + r.id + "' title='편집'>✏️</button>" +
+          "<button class='d' data-del='" + r.id + "' title='삭제'>🗑</button>";
+        if (tie) {
+          actions += "<button class='m' data-move='up' data-id='" + r.id + "' title='위로'>↑</button>" +
+            "<button class='m' data-move='down' data-id='" + r.id + "' title='아래로'>↓</button>" +
+            "<button class='rb " + (r.rc ? "on" : "") + "' data-rematch='" + r.id + "' title='재경기 순위 확정'>🔁</button>";
+        }
+        actions += "</td>";
+      }
       body += "<tr class='" + rc + "'>" +
         "<td class='rankcell'>" + medal + r._rank + "</td>" +
-        "<td class='name'>" + esc(r.name) + "</td>" +
+        "<td class='name'>" + badge + esc(r.name) + "</td>" +
         "<td class='task'>" + (r.task ? esc(r.task) : "-") + "</td>" +
         "<td class='score'>" + fmtScore(r.score) + "</td>" +
-        (editMode ? "<td class='row-actions'><button class='e' data-edit='" + r.id + "'>✏️</button>" +
-          "<button class='d' data-del='" + r.id + "'>🗑</button></td>" : "") +
+        actions +
         "</tr>";
     });
     body += "</tbody>";
@@ -480,6 +520,8 @@
     var t = ev.target;
     var editId = t.getAttribute && t.getAttribute("data-edit");
     var delId = t.getAttribute && t.getAttribute("data-del");
+    var moveDir = t.getAttribute && t.getAttribute("data-move");
+    var rematchId = t.getAttribute && t.getAttribute("data-rematch");
     if (editId) {
       var r = records.find(function (x) { return x.id === editId; });
       if (r) openForm("edit", r);
@@ -491,6 +533,11 @@
         records = records.filter(function (x) { return x.id !== delId; });
         saveRecords(); render();
       }
+    } else if (moveDir) {
+      moveRec(t.getAttribute("data-id"), moveDir);
+    } else if (rematchId) {
+      var rr = records.find(function (x) { return x.id === rematchId; });
+      if (rr) { rr.rc = !rr.rc; saveRecords(); render(); }
     }
   });
 
